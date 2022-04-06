@@ -12,3 +12,12 @@ assert_eq<"foo", TrimR<"foo    ">>();
 
 export type Trim<Input extends string> = TrimL<TrimR<Input>>;
 assert_eq<"foo", Trim<"    foo    ">>();
+
+export type Contains<
+  Value extends string,
+  InString extends string
+> = InString extends `${infer Before}${Value}${infer After}` ? true : false;
+assert_eq<true, Contains<"foo", "foobar">>();
+assert_eq<true, Contains<"bar", "foobar">>();
+assert_eq<true, Contains<"oba", "foobar">>();
+assert_eq<false, Contains<"boa", "foobar">>();
