@@ -1,6 +1,7 @@
+import { Nil } from "./core";
 import { assert_eq } from "./test";
 
-type DigitMap = {
+export type DigitMap = {
   "0": 0;
   "1": 1;
   "2": 2;
@@ -13,80 +14,97 @@ type DigitMap = {
   "9": 9;
 };
 
-type ParseDigit<Input extends keyof DigitMap> = DigitMap[Input];
+export type ParseDigit<Input extends keyof DigitMap> = DigitMap[Input];
 
-type Nil = {
-  ".": Nil;
-};
+export type Length<T extends any[]> = T extends { length: infer L }
+  ? L extends number
+    ? L
+    : never
+  : never;
 
-type RangeN<
+export type RangeN<
   Size extends number,
   TArray extends number[] = []
-> = TArray["length"] extends Size
+> = Length<TArray> extends Size
   ? TArray
-  : RangeN<Size, [...TArray, TArray["length"]]>;
+  : RangeN<Size, [...TArray, Length<TArray>]>;
 
-type NonZero = Exclude<keyof DigitMap, "0" | "">;
-type ValidNumberLiteral =
+export type NonZero = Exclude<keyof DigitMap, "0">;
+export type ValidNumberLiteral =
   | keyof DigitMap
   | `${NonZero}${keyof DigitMap}`
   | `${NonZero}${keyof DigitMap}${keyof DigitMap}`;
 
-type N<V extends number> = Add<V, 0>;
+export type N<V extends number> = Add<V, 0>;
 assert_eq<10, N<10>>();
 
-type Add<A extends number, B extends number> = [
-  ...RangeN<A>,
-  ...RangeN<B>
-]["length"];
+export type Add<A extends number, B extends number> = Length<
+  [...RangeN<A>, ...RangeN<B>]
+>;
 assert_eq<3, Add<1, 2>>();
+assert_eq<0, Add<0, 0>>();
 
-type OneLess<A extends number> = RangeN<A> extends [infer _, ...infer Tail]
-  ? Tail["length"]
+export type OneLess<A extends number> = RangeN<A> extends [
+  infer _,
+  ...infer Tail
+]
+  ? Length<Tail>
   : 0;
 assert_eq<9, OneLess<10>>();
 
-type Sub<A extends number, B extends number> = A extends 0
+export type Sub<A extends number, B extends number> = A extends 0
   ? B extends 0
     ? 0
-    : never
+    : Nil
   : B extends 0
   ? A
   : Sub<OneLess<A>, OneLess<B>>;
 assert_eq<4, Sub<9, 5>>();
 assert_eq<0, Sub<1, 1>>();
-assert_eq<never, Sub<5, 10>>();
+assert_eq<Nil, Sub<5, 10>>();
 
-type Skip<n extends number, TArray extends [...any]> = n extends 0
-  ? TArray
-  : TArray extends [infer _, ...infer Tail]
-  ? Skip<OneLess<n>, Tail>
-  : never;
+type MulImpl<
+  Value extends number,
+  Times extends number,
+  Result extends number = 0
+> = Times extends 0
+  ? Result
+  : MulImpl<Value, OneLess<Times>, Add<Value, Result>>;
 
-assert_eq<[0, 1, 2], Skip<0, RangeN<3>>>();
-assert_eq<[2, 3, 4], Skip<2, RangeN<5>>>();
-assert_eq<never, Skip<2, RangeN<0>>>();
+export type Mul<A extends number, B extends number> = MulImpl<A, B>;
+assert_eq<1, Mul<1, 1>>();
+assert_eq<4, Mul<2, 2>>();
 
-type Take<
-  n extends number,
-  List extends [...any],
-  ToArray extends [...any] = []
-> = n extends 0
-  ? ToArray
-  : List extends [infer Head, ...infer Tail]
-  ? Take<OneLess<n>, Tail, [...ToArray, Head]>
-  : never;
+type PowImpl<
+  Value extends number,
+  Times extends number,
+  Result extends number = 0,
+  I extends number = 0
+> = I extends Times
+  ? Times extends 0
+    ? 1
+    : Result
+  : I extends 0
+  ? PowImpl<Value, Times, Mul<1, Value>, Add<I, 1>>
+  : PowImpl<Value, Times, Mul<Result, Value>, Add<I, 1>>;
 
-assert_eq<[], Take<0, RangeN<3>>>();
-assert_eq<[0, 1], Take<2, RangeN<5>>>();
-assert_eq<[0, 1], Take<3, RangeN<2>>>();
+export type Pow<A extends number, B extends number> = PowImpl<A, B>;
+assert_eq<1, Pow<0, 0>>();
+assert_eq<0, Pow<0, 1>>();
+assert_eq<1, Pow<1, 0>>();
+assert_eq<4, Pow<2, 2>>();
+assert_eq<256, Pow<4, 4>>();
 
-type StringToNumber<
-  T extends ValidNumberLiteral,
-  A extends any[] = []
-> = T extends ValidNumberLiteral
-  ? T extends keyof [0, ...A]
-    ? A["length"]
-    : StringToNumber<T, [0, ...A]>
-  : never;
+type StringToNumberImpl<
+  Input extends ValidNumberLiteral,
+  A extends [...any] = []
+> = Input extends ValidNumberLiteral
+  ? Input extends keyof [0, ...A]
+    ? Length<A>
+    : StringToNumberImpl<Input, [0, ...A]>
+  : Nil;
+
+export type StringToNumber<Input extends ValidNumberLiteral> =
+  StringToNumberImpl<Input>;
+
 assert_eq<10, StringToNumber<"10">>();

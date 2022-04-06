@@ -1,3 +1,5 @@
+import { Nil } from "./core";
+import { ValidNumberLiteral } from "./numbers";
 import { Trim } from "./string";
 import { assert_eq } from "./test";
 
@@ -21,6 +23,13 @@ type Expression<Input extends string> = Input extends ""
       rhs: Expression<Trim<RHS>>;
       source: Input;
     }
+  : Input extends `${infer LHS}*${infer RHS}`
+  ? {
+      type: "MUL";
+      lhs: Expression<Trim<LHS>>;
+      rhs: Expression<Trim<RHS>>;
+      source: Input;
+    }
   : Input extends `${infer LHS}/${infer RHS}`
   ? {
       type: "DIV";
@@ -28,30 +37,46 @@ type Expression<Input extends string> = Input extends ""
       rhs: Expression<Trim<RHS>>;
       source: Input;
     }
-  : Input extends `${infer LHS}*${infer RHS}`
-  ? Input extends `${infer LHS}**${infer RHS}`
-    ? {
-        type: "POW";
-        lhs: Expression<Trim<LHS>>;
-        rhs: Expression<Trim<RHS>>;
-        source: Input;
-      }
-    : {
-        type: "MUL";
-        lhs: Expression<Trim<LHS>>;
-        rhs: Expression<Trim<RHS>>;
-        source: Input;
-      }
   : { type: "VALUE"; value: Input };
 
-type Expected = {
-  type: "ADD";
-  lhs: {
+{
+  type Expected = {
+    type: "SUB";
+    lhs: { type: "VALUE"; value: "1" };
+    rhs: {
+      type: "ADD";
+      lhs: { type: "VALUE"; value: "2" };
+      rhs: { type: "VALUE"; value: "3" };
+    };
+  };
+
+  assert_eq<Expected, Expression<"1 - 2 + 3">>();
+}
+
+{
+  type Expected = {
+    type: "ADD";
+    lhs: { type: "VALUE"; value: "1" };
+    rhs: {
+      type: "MUL";
+      lhs: { type: "VALUE"; value: "2" };
+      rhs: { type: "VALUE"; value: "3" };
+    };
+  };
+
+  assert_eq<Expected, Expression<"1 + 2 * 3">>();
+}
+
+{
+  type Expected = {
     type: "MUL";
     lhs: { type: "VALUE"; value: "1" };
-    rhs: { type: "VALUE"; value: "2" };
+    rhs: {
+      type: "DIV";
+      lhs: { type: "VALUE"; value: "2" };
+      rhs: { type: "VALUE"; value: "3" };
+    };
   };
-  rhs: { type: "VALUE"; value: "5" };
-};
 
-assert_eq<Expected, Expression<"1 * 2 + 5">>();
+  assert_eq<Expected, Expression<"1 * 2 / 3">>();
+}
