@@ -72,8 +72,27 @@ type MulImpl<
   : MulImpl<Value, OneLess<Times>, Add<Value, Result>>;
 
 export type Mul<A extends number, B extends number> = MulImpl<A, B>;
+assert_eq<0, Mul<1, 0>>();
 assert_eq<1, Mul<1, 1>>();
 assert_eq<4, Mul<2, 2>>();
+
+type DivImpl<
+  Value extends number,
+  ByN extends number,
+  Result extends number = 0
+> = ByN extends 0
+  ? Nil
+  : Sub<Value, ByN> extends Nil
+  ? Result
+  : DivImpl<Sub<Value, ByN>, ByN, Add<Result, 1>>;
+
+export type Div<A extends number, B extends number> = DivImpl<A, B>;
+assert_eq<Nil, Div<0, 0>>();
+assert_eq<0, Div<0, 1>>();
+assert_eq<Nil, Div<1, 0>>();
+assert_eq<1, Div<1, 1>>();
+assert_eq<1, Div<2, 2>>();
+assert_eq<4, Div<16, 4>>();
 
 type PowImpl<
   Value extends number,
@@ -95,14 +114,21 @@ assert_eq<1, Pow<1, 0>>();
 assert_eq<4, Pow<2, 2>>();
 assert_eq<256, Pow<4, 4>>();
 
+// type StringToNumberImpl<
+//   Input extends ValidNumberLiteral,
+//   A extends [...any] = []
+// > = Input extends ValidNumberLiteral
+//   ? Input extends keyof [0, ...A]
+//     ? Length<A>
+//     : StringToNumberImpl<Input, [0, ...A]>
+//   : Nil;
+
 type StringToNumberImpl<
   Input extends ValidNumberLiteral,
   A extends [...any] = []
-> = Input extends ValidNumberLiteral
-  ? Input extends keyof [0, ...A]
-    ? Length<A>
-    : StringToNumberImpl<Input, [0, ...A]>
-  : Nil;
+> = Input extends `${A["length"]}`
+  ? A["length"]
+  : StringToNumberImpl<Input, [1, ...A]>;
 
 export type StringToNumber<Input extends ValidNumberLiteral> =
   StringToNumberImpl<Input>;
